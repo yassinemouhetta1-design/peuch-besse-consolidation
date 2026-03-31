@@ -1,0 +1,5 @@
+{
+  "name": "Peuch & Besse - Analyse Excel Ambassade",
+  "description": "Consolidate wine orders from multiple embassy price lists into a single global summary file with automatic offset detection and verification.",
+  "requestFramePermissions": []
+}
