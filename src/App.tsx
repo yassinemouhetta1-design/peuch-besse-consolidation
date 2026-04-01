@@ -305,49 +305,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Template upload — Consolidation tab only */}
-            {activeTab === 'consolidate' && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
-              >
-                <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Template Matrice V3.1
-                  </h2>
-                </div>
-                <div className="p-4">
-                  {templateLoading ? (
-                    <div className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 bg-slate-50">
-                      <Loader2 className="text-brand animate-spin shrink-0" size={18} />
-                      <p className="text-xs font-medium text-slate-500">
-                        Chargement du template…
-                      </p>
-                    </div>
-                  ) : templateFile ? (
-                    <div className="flex items-center gap-3 p-3 rounded-lg border border-emerald-200 bg-emerald-50">
-                      <CheckCircle2 className="text-emerald-500 shrink-0" size={18} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-slate-900 truncate">
-                          {templateFile.name}
-                        </p>
-                        <p className="text-[10px] font-mono text-emerald-600 uppercase">
-                          {(templateFile.size / 1024).toFixed(0)} KB · prêt
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3 p-3 rounded-lg border border-rose-200 bg-rose-50">
-                      <AlertTriangle className="text-rose-500 shrink-0" size={18} />
-                      <p className="text-xs font-medium text-rose-700">
-                        Template non disponible — fichier introuvable sur le serveur
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            )}
 
             {/* Action Button */}
             <div>
