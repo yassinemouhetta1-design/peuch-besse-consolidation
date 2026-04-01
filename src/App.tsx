@@ -6,7 +6,6 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
-  Download,
   AlertTriangle,
   CheckCircle2,
   FileSpreadsheet,
@@ -825,21 +824,6 @@ export default function App() {
         </main>
       </div>
 
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(163, 145, 97, 0.2);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(163, 145, 97, 0.4);
-        }
-      `}</style>
     </div>
   );
 }
