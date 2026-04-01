@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Upload,
   FileText,
@@ -41,7 +41,23 @@ export default function App() {
 
   // Consolidate tab
   const [templateFile, setTemplateFile] = useState<File | null>(null);
-  const templateInputRef = useRef<HTMLInputElement>(null);
+  const [templateLoading, setTemplateLoading] = useState(true);
+
+  // Charger le template automatiquement au démarrage
+  useEffect(() => {
+    fetch('/matrice-v3.1.xlsx')
+      .then((res) => res.blob())
+      .then((blob) => {
+        const file = new File([blob], 'Fichier Global 2026 MATRICE V3.1 YM.xlsx', {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        });
+        setTemplateFile(file);
+      })
+      .catch(() => {
+        // Si le fetch échoue, l'utilisateur peut uploader manuellement
+      })
+      .finally(() => setTemplateLoading(false));
+  }, []);
   const [isConsolidating, setIsConsolidating] = useState(false);
   const [consolidationProgress, setConsolidationProgress] = useState<{
     current: number;
@@ -78,12 +94,6 @@ export default function App() {
         i === index ? { ...f, completed: !f.completed } : f
       )
     );
-  };
-
-  const handleTemplateUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      setTemplateFile(e.target.files[0]);
-    }
   };
 
   // Analyze
@@ -174,7 +184,6 @@ export default function App() {
               onClick={() => {
                 setFiles([]);
                 setResults(null);
-                setTemplateFile(null);
                 setConsolidationReport(null);
               }}
               className="px-4 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
@@ -310,46 +319,31 @@ export default function App() {
                   </h2>
                 </div>
                 <div className="p-4">
-                  {templateFile ? (
-                    <div className="flex items-center gap-3 p-3 rounded-lg border border-brand/30 bg-brand/5">
-                      <FileSpreadsheet
-                        className="text-brand shrink-0"
-                        size={20}
-                      />
+                  {templateLoading ? (
+                    <div className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 bg-slate-50">
+                      <Loader2 className="text-brand animate-spin shrink-0" size={18} />
+                      <p className="text-xs font-medium text-slate-500">
+                        Chargement du template…
+                      </p>
+                    </div>
+                  ) : templateFile ? (
+                    <div className="flex items-center gap-3 p-3 rounded-lg border border-emerald-200 bg-emerald-50">
+                      <CheckCircle2 className="text-emerald-500 shrink-0" size={18} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-slate-900 truncate">
+                        <p className="text-xs font-bold text-slate-900 truncate">
                           {templateFile.name}
                         </p>
-                        <p className="text-[10px] font-mono text-slate-400 uppercase">
-                          {(templateFile.size / 1024).toFixed(0)} KB
+                        <p className="text-[10px] font-mono text-emerald-600 uppercase">
+                          {(templateFile.size / 1024).toFixed(0)} KB · prêt
                         </p>
                       </div>
-                      <button
-                        onClick={() => setTemplateFile(null)}
-                        className="text-slate-400 hover:text-rose-500 transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
                     </div>
                   ) : (
-                    <div
-                      onClick={() => templateInputRef.current?.click()}
-                      className="border-2 border-dashed border-brand/30 rounded-lg p-6 text-center hover:border-brand hover:bg-brand/5 transition-all cursor-pointer group"
-                    >
-                      <FileSpreadsheet
-                        className="mx-auto mb-2 text-brand/40 group-hover:text-brand transition-colors"
-                        size={28}
-                      />
-                      <p className="text-xs font-semibold text-brand/60 group-hover:text-brand">
-                        Déposer le fichier MATRICE V3.1
+                    <div className="flex items-center gap-3 p-3 rounded-lg border border-rose-200 bg-rose-50">
+                      <AlertTriangle className="text-rose-500 shrink-0" size={18} />
+                      <p className="text-xs font-medium text-rose-700">
+                        Template non disponible — fichier introuvable sur le serveur
                       </p>
-                      <input
-                        type="file"
-                        accept=".xlsx,.xlsm"
-                        className="hidden"
-                        ref={templateInputRef}
-                        onChange={handleTemplateUpload}
-                      />
                     </div>
                   )}
                 </div>
