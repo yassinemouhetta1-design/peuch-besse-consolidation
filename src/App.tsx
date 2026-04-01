@@ -33,6 +33,7 @@ export default function App() {
   // Shared
   const [activeTab, setActiveTab] = useState<TabType>('consolidate');
   const [files, setFiles] = useState<SourceFileStatus[]>([]);
+  const [inputKey, setInputKey] = useState(0);
   const sourceInputRef = useRef<HTMLInputElement>(null);
 
   // Analyze tab
@@ -88,7 +89,7 @@ export default function App() {
     if (results) {
       setResults((prev) => (prev ? prev.filter((_, i) => i !== index) : null));
     }
-    if (sourceInputRef.current) sourceInputRef.current.value = '';
+    setInputKey((k) => k + 1);
   };
 
   const toggleCompleted = (index: number) => {
@@ -193,7 +194,7 @@ export default function App() {
                 setResults(null);
                 setConsolidationReport(null);
                 setConsolidationBlob(null);
-                if (sourceInputRef.current) sourceInputRef.current.value = '';
+                setInputKey((k) => k + 1);
               }}
               className="px-4 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
             >
@@ -259,6 +260,7 @@ export default function App() {
                     .xlsx, .xls, .xlsm, .xlsb
                   </p>
                   <input
+                    key={inputKey}
                     type="file"
                     multiple
                     accept=".xlsx,.xlsm,.xlsb,.xls"
