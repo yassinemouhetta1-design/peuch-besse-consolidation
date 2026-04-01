@@ -33,7 +33,6 @@ export default function App() {
   // Shared
   const [activeTab, setActiveTab] = useState<TabType>('consolidate');
   const [files, setFiles] = useState<SourceFileStatus[]>([]);
-  const [inputKey, setInputKey] = useState(0);
   const sourceInputRef = useRef<HTMLInputElement>(null);
 
   // Analyze tab
@@ -75,13 +74,14 @@ export default function App() {
 
   // ── Handlers ────────────────────────────────────────────────
   const handleSourceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
+    if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files).map((file) => ({
         file,
         completed: false,
       }));
       setFiles((prev) => [...prev, ...newFiles]);
     }
+    e.target.value = '';
   };
 
   const removeSourceFile = (index: number) => {
@@ -89,7 +89,6 @@ export default function App() {
     if (results) {
       setResults((prev) => (prev ? prev.filter((_, i) => i !== index) : null));
     }
-    setInputKey((k) => k + 1);
   };
 
   const toggleCompleted = (index: number) => {
@@ -254,7 +253,6 @@ export default function App() {
                     .xlsx, .xls, .xlsm, .xlsb
                   </p>
                   <input
-                    key={inputKey}
                     id="source-file-input"
                     type="file"
                     multiple
