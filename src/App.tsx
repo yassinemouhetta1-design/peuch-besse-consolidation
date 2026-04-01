@@ -395,8 +395,7 @@ export default function App() {
                         size={40}
                       />
                       <p className="text-sm font-medium text-slate-400">
-                        Déposez vos fichiers sources + template puis lancez la
-                        consolidation
+                        Ajoutez vos fichiers sources et lancez la consolidation
                       </p>
                       <div className="mt-6 max-w-md mx-auto text-left space-y-3">
                         <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-50">
@@ -405,20 +404,12 @@ export default function App() {
                           </span>
                           <p className="text-xs text-slate-500">
                             Ajoutez vos <strong>fichiers sources</strong>{' '}
-                            (commandes individuelles)
+                            (commandes individuelles par client)
                           </p>
                         </div>
                         <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-50">
                           <span className="w-6 h-6 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center shrink-0">
                             2
-                          </span>
-                          <p className="text-xs text-slate-500">
-                            Déposez le <strong>template MATRICE V3.1</strong>
-                          </p>
-                        </div>
-                        <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-50">
-                          <span className="w-6 h-6 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center shrink-0">
-                            3
                           </span>
                           <p className="text-xs text-slate-500">
                             Cliquez{' '}
