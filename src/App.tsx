@@ -245,9 +245,9 @@ export default function App() {
               </div>
 
               <div className="p-4 space-y-3">
-                <div
-                  onClick={() => sourceInputRef.current?.click()}
-                  className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center hover:border-brand/50 hover:bg-brand/5 transition-all cursor-pointer group"
+                <label
+                  htmlFor="source-file-input"
+                  className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center hover:border-brand/50 hover:bg-brand/5 transition-all cursor-pointer group block"
                 >
                   <Upload
                     className="mx-auto mb-2 text-slate-400 group-hover:text-brand transition-colors"
@@ -261,6 +261,7 @@ export default function App() {
                   </p>
                   <input
                     key={inputKey}
+                    id="source-file-input"
                     type="file"
                     multiple
                     accept=".xlsx,.xlsm,.xlsb,.xls"
@@ -268,7 +269,7 @@ export default function App() {
                     ref={sourceInputRef}
                     onChange={handleSourceUpload}
                   />
-                </div>
+                </label>
 
                 <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar">
                   <AnimatePresence initial={false}>
