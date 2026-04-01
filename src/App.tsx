@@ -189,13 +189,7 @@ export default function App() {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => {
-                setFiles([]);
-                setResults(null);
-                setConsolidationReport(null);
-                setConsolidationBlob(null);
-                setInputKey((k) => k + 1);
-              }}
+              onClick={() => window.location.reload()}
               className="px-4 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
             >
               Réinitialiser
