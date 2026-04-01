@@ -11,6 +11,7 @@ import {
   FileSpreadsheet,
   Zap,
   Info,
+  Download,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { analyzeSourceFiles, ConsolidationResult } from './lib/excelService';
@@ -18,6 +19,7 @@ import {
   consolidateToMatrix,
   ConsolidationReport,
   MatchReport,
+  MatchedArticle,
 } from './lib/consolidateService';
 
 type TabType = 'analyze' | 'consolidate';
@@ -65,6 +67,7 @@ export default function App() {
   } | null>(null);
   const [consolidationReport, setConsolidationReport] =
     useState<ConsolidationReport | null>(null);
+  const [consolidationBlob, setConsolidationBlob] = useState<Blob | null>(null);
   const [expandedReportIdx, setExpandedReportIdx] = useState<number | null>(
     null
   );
@@ -128,16 +131,7 @@ export default function App() {
       );
 
       setConsolidationReport(report);
-
-      // Auto-download the generated file
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'GLOBAL_CONSOLIDE.xlsx';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      setConsolidationBlob(blob);
     } catch (error) {
       console.error(error);
       alert('Erreur lors de la consolidation : ' + (error as Error).message);
@@ -151,6 +145,19 @@ export default function App() {
     setExpandedIdx(expandedIdx === idx ? null : idx);
   const toggleReportExpand = (idx: number) =>
     setExpandedReportIdx(expandedReportIdx === idx ? null : idx);
+
+  const colorBadge = (color: string) => {
+    const c = color.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (c.includes('red') || c.includes('rouge'))
+      return 'bg-red-100 text-red-700 border border-red-200';
+    if (c.includes('rose') || c.includes('pink'))
+      return 'bg-pink-100 text-pink-700 border border-pink-200';
+    if (c.includes('white') || c.includes('blanc'))
+      return 'bg-amber-50 text-amber-700 border border-amber-200';
+    if (c.includes('champagne') || c.includes('sparkling') || c.includes('bulles'))
+      return 'bg-yellow-50 text-yellow-700 border border-yellow-200';
+    return 'bg-slate-100 text-slate-600 border border-slate-200';
+  };
 
   const progressPct = consolidationProgress
     ? Math.round(
@@ -184,6 +191,8 @@ export default function App() {
                 setFiles([]);
                 setResults(null);
                 setConsolidationReport(null);
+                setConsolidationBlob(null);
+                if (sourceInputRef.current) sourceInputRef.current.value = '';
               }}
               className="px-4 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
             >
@@ -381,9 +390,29 @@ export default function App() {
                     Rapport de Consolidation
                   </h2>
                   {consolidationReport && (
-                    <span className="text-xs font-bold text-brand">
-                      {consolidationReport.totalClients} clients
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-bold text-brand">
+                        {consolidationReport.totalClients} clients
+                      </span>
+                      {consolidationBlob && (
+                        <button
+                          onClick={() => {
+                            const url = URL.createObjectURL(consolidationBlob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'GLOBAL_CONSOLIDE.xlsx';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-brand text-white text-xs font-bold rounded-lg hover:bg-brand/90 transition-colors shadow-sm"
+                        >
+                          <Download size={13} />
+                          Télécharger
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -450,7 +479,7 @@ export default function App() {
                       </div>
 
                       {/* Per-client reports */}
-                      <div className="space-y-2 max-h-[600px] overflow-y-auto custom-scrollbar">
+                      <div className="space-y-2">
                         {consolidationReport.reports.map(
                           (rep: MatchReport, idx: number) => (
                             <div
@@ -521,40 +550,96 @@ export default function App() {
                               </div>
 
                               <AnimatePresence>
-                                {expandedReportIdx === idx &&
-                                  rep.unmatched.length > 0 && (
-                                    <motion.div
-                                      initial={{ height: 0, opacity: 0 }}
-                                      animate={{ height: 'auto', opacity: 1 }}
-                                      exit={{ height: 0, opacity: 0 }}
-                                      className="border-t border-slate-100 bg-amber-50/50 overflow-hidden"
-                                    >
-                                      <div className="p-4">
-                                        <div className="flex items-center gap-2 mb-3">
-                                          <Info
-                                            className="text-amber-500"
-                                            size={14}
-                                          />
-                                          <p className="text-[10px] font-bold uppercase text-amber-600">
-                                            Produits non trouvés dans la
-                                            Matrice
-                                          </p>
+                                {expandedReportIdx === idx && (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    className="border-t border-slate-100 overflow-hidden"
+                                  >
+                                    <div className="p-4 space-y-4">
+                                      {/* Matched articles */}
+                                      {rep.matchedArticles.length > 0 && (
+                                        <div>
+                                          <div className="flex items-center gap-2 mb-2">
+                                            <CheckCircle2 className="text-emerald-500" size={13} />
+                                            <p className="text-[10px] font-bold uppercase text-emerald-600">
+                                              Produits matchés ({rep.matchedArticles.length})
+                                            </p>
+                                          </div>
+                                          <table className="w-full text-left border-collapse">
+                                            <thead>
+                                              <tr className="text-[10px] uppercase font-bold text-slate-400 border-b border-slate-200">
+                                                <th className="py-1.5 px-2">Désignation</th>
+                                                <th className="py-1.5 px-2">Couleur</th>
+                                                <th className="py-1.5 px-2">Millésime</th>
+                                                <th className="py-1.5 px-2">Taille</th>
+                                                <th className="py-1.5 px-2 text-right">Qté (btl)</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              {rep.matchedArticles.map((art: MatchedArticle, aIdx: number) => (
+                                                <tr key={aIdx} className="border-b border-slate-100 hover:bg-slate-50">
+                                                  <td className="py-2 px-2">
+                                                    <p className="text-xs font-semibold text-slate-900">{art.designation}</p>
+                                                    {art.appellation && art.appellation !== art.designation && (
+                                                      <p className="text-[10px] text-brand italic">{art.appellation}</p>
+                                                    )}
+                                                  </td>
+                                                  <td className="py-2 px-2">
+                                                    {art.color ? (
+                                                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${colorBadge(art.color)}`}>
+                                                        {art.color}
+                                                      </span>
+                                                    ) : (
+                                                      <span className="text-slate-300">—</span>
+                                                    )}
+                                                  </td>
+                                                  <td className="py-2 px-2">
+                                                    {art.millesime ? (
+                                                      <span className="text-xs font-mono font-semibold text-slate-700">{art.millesime}</span>
+                                                    ) : (
+                                                      <span className="text-slate-300">—</span>
+                                                    )}
+                                                  </td>
+                                                  <td className="py-2 px-2">
+                                                    {art.taille ? (
+                                                      <span className="text-xs font-mono font-semibold text-slate-700">{art.taille}</span>
+                                                    ) : (
+                                                      <span className="text-slate-300">—</span>
+                                                    )}
+                                                  </td>
+                                                  <td className="py-2 px-2 text-right font-mono text-sm font-bold text-slate-900">
+                                                    {art.qty}
+                                                  </td>
+                                                </tr>
+                                              ))}
+                                            </tbody>
+                                          </table>
                                         </div>
-                                        <div className="space-y-1">
-                                          {rep.unmatched.map(
-                                            (name: string, uIdx: number) => (
-                                              <p
-                                                key={uIdx}
-                                                className="text-xs text-amber-800 font-medium py-1 px-2 bg-amber-100/50 rounded"
-                                              >
+                                      )}
+
+                                      {/* Unmatched articles */}
+                                      {rep.unmatched.length > 0 && (
+                                        <div>
+                                          <div className="flex items-center gap-2 mb-2">
+                                            <Info className="text-amber-500" size={13} />
+                                            <p className="text-[10px] font-bold uppercase text-amber-600">
+                                              Non trouvés dans la Matrice ({rep.unmatched.length})
+                                            </p>
+                                          </div>
+                                          <div className="space-y-1">
+                                            {rep.unmatched.map((name: string, uIdx: number) => (
+                                              <p key={uIdx} className="text-xs text-amber-800 font-medium py-1 px-2 bg-amber-100/50 rounded">
                                                 {name}
                                               </p>
-                                            )
-                                          )}
+                                            ))}
+                                          </div>
                                         </div>
-                                      </div>
-                                    </motion.div>
-                                  )}
+                                      )}
+                                    </div>
+                                  </motion.div>
+                                )}
                               </AnimatePresence>
                             </div>
                           )
@@ -681,6 +766,15 @@ export default function App() {
                                               <th className="py-2 px-2">
                                                 Désignation
                                               </th>
+                                              <th className="py-2 px-2">
+                                                Couleur
+                                              </th>
+                                              <th className="py-2 px-2">
+                                                Millésime
+                                              </th>
+                                              <th className="py-2 px-2">
+                                                Taille
+                                              </th>
                                               <th className="py-2 px-2 text-right">
                                                 Qté
                                               </th>
@@ -702,6 +796,29 @@ export default function App() {
                                                   <p className="text-[10px] text-brand font-medium italic">
                                                     {art.appellation}
                                                   </p>
+                                                </td>
+                                                <td className="py-3 px-2">
+                                                  {art.color ? (
+                                                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${colorBadge(art.color)}`}>
+                                                      {art.color}
+                                                    </span>
+                                                  ) : (
+                                                    <span className="text-slate-300">—</span>
+                                                  )}
+                                                </td>
+                                                <td className="py-3 px-2">
+                                                  {art.millesime ? (
+                                                    <span className="text-xs font-mono font-semibold text-slate-700">{art.millesime}</span>
+                                                  ) : (
+                                                    <span className="text-slate-300">—</span>
+                                                  )}
+                                                </td>
+                                                <td className="py-3 px-2">
+                                                  {art.taille ? (
+                                                    <span className="text-xs font-mono font-semibold text-slate-700">{art.taille}</span>
+                                                  ) : (
+                                                    <span className="text-slate-300">—</span>
+                                                  )}
                                                 </td>
                                                 <td className="py-3 px-2 text-right font-mono text-slate-500">
                                                   {art.quantity}
