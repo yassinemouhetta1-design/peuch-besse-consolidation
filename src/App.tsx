@@ -88,6 +88,7 @@ export default function App() {
     if (results) {
       setResults((prev) => (prev ? prev.filter((_, i) => i !== index) : null));
     }
+    if (sourceInputRef.current) sourceInputRef.current.value = '';
   };
 
   const toggleCompleted = (index: number) => {
