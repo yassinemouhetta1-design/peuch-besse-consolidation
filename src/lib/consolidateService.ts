@@ -40,6 +40,21 @@ function normalize(str: string): string {
 }
 
 /**
+ * Traduit les couleurs anglaises en français pour le matching avec la MATRICE
+ * Fichiers EN : white, red, pink, rosé → Fichiers FR / MATRICE : blanc, rouge, rosé
+ */
+function normalizeColor(color: string): string {
+  const n = normalize(color);
+  // Traductions EN → FR
+  if (n === 'white' || n === 'blanc') return 'blanc';
+  if (n === 'red'   || n === 'rouge') return 'rouge';
+  if (n === 'pink'  || n === 'rose'  || n === 'rose'  || n.includes('rose')) return 'rose';
+  if (n === 'orange') return 'orange';
+  if (n === 'sparkling' || n === 'effervescent') return 'effervescent';
+  return n; // valeur normalisée brute si non reconnue
+}
+
+/**
  * Parse a numeric value from an Excel cell, handling formulas and rich text
  */
 function parseNum(value: any): number {
@@ -254,7 +269,7 @@ export async function consolidateToMatrix(
     for (const article of source.articles) {
       const nd = normalize(article.designation);
       const na = normalize(article.appellation);
-      const nc = normalize(article.color);
+      const nc = normalizeColor(article.color); // traduit EN→FR : white→blanc, red→rouge...
       const nm = normalize(article.millesime);
       const nt = normalize(article.taille);
 
