@@ -46,9 +46,9 @@ function parseNum(value: any): number {
   if (value === null || value === undefined) return 0;
   let val = value;
   if (typeof value === 'object' && 'result' in value) val = value.result;
-  if (typeof value === 'object' && 'richText' in value) {
-    val = (value as any).richText.map((rt: any) => rt.text).join('');
-  }
+  // Si richText → c'est un label/description, PAS un nombre → retourner 0
+  // (évite d'extraire des chiffres parasites ex: "min 50 coffrets" → 50)
+  if (typeof value === 'object' && 'richText' in value) return 0;
   if (typeof val === 'number') return val;
   const clean = val.toString().replace(/[^\d,.\-]/g, '').replace(',', '.');
   const parsed = parseFloat(clean);
