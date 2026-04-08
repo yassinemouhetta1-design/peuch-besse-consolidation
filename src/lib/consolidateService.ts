@@ -111,10 +111,29 @@ async function parseSourceFile(file: File): Promise<ParsedSourceFile> {
       ? '14 Juillet'
       : `${cellText(nom)} ${cellText(prenom)}`.trim();
 
-  // Extract articles from rows 14-179
+  // ── Détection dynamique du header (FR: "Désignation" / EN: "Designation", "Product", etc.) ──
+  const stripAccents = (s: string) =>
+    s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const HEADER_KEYWORDS = ['designation', 'description', 'product', 'produit', 'libelle', 'article'];
+
+  let headerRow = 13; // fallback ligne 13 (données démarrent à 14)
+  for (let r = 1; r <= 50; r++) {
+    for (let c = 1; c <= 5; c++) {
+      const raw = sheet.getRow(r).getCell(c).value?.toString() || '';
+      if (HEADER_KEYWORDS.some(kw => stripAccents(raw).includes(kw))) {
+        headerRow = r;
+        break;
+      }
+    }
+    if (headerRow !== 13 || r === 13) break;
+  }
+  const firstDataRow = headerRow + 2; // ligne header + 1 ligne vide/sous-header + données
+  const lastDataRow  = Math.min(headerRow + 170, 250); // max ~170 produits
+
+  // ── Extraction des articles ──────────────────────────────────────────────
   const articles: { designation: string; appellation: string; color: string; millesime: string; taille: string; qty: number }[] = [];
 
-  for (let r = 14; r <= 179; r++) {
+  for (let r = firstDataRow; r <= lastDataRow; r++) {
     const row = sheet.getRow(r);
     const rawDesignation = row.getCell(2).value; // Col B
     const designation = cellText(rawDesignation);
@@ -125,8 +144,7 @@ async function parseSourceFile(file: File): Promise<ParsedSourceFile> {
     const btlPerCarton = parseNum(row.getCell(9).value) || 1; // Col I, default 1
     const qty = Math.round(cartons * btlPerCarton);
 
-    // Double protection : skip les lignes de titre/section qui ont du texte col B
-    // mais aucune quantité ni montant HT (évite les valeurs parasites comme 2500 en col L)
+    // Double protection : skip les lignes de titre/section
     if (lineTotal <= 0 && cartons <= 0) continue;
 
     const appellation = cellText(row.getCell(4).value); // Col D

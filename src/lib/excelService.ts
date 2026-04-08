@@ -101,13 +101,21 @@ export async function analyzeSourceFiles(
         sourceSheet = sourceWorkbook.worksheets[0];
       }
 
-      // Find Header "Désignation"
+      // Find Header "Désignation" / "Designation" (FR + EN)
+      // On normalise le texte pour supprimer les accents et gérer les deux langues
+      const stripAccents = (s: string) =>
+        s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+      // Mots-clés acceptés : français ET anglais
+      const HEADER_KEYWORDS = ['designation', 'description', 'product', 'produit', 'libelle', 'article'];
+
       let sourceHeaderRow = -1;
       let designationCol = 2;
       for (let r = 1; r <= 50; r++) {
         for (let c = 1; c <= 5; c++) {
-          const cellValue = sourceSheet.getRow(r).getCell(c).value?.toString().toLowerCase() || '';
-          if (cellValue.includes('désignation')) {
+          const raw = sourceSheet.getRow(r).getCell(c).value?.toString() || '';
+          const normalized = stripAccents(raw);
+          if (HEADER_KEYWORDS.some(kw => normalized.includes(kw))) {
             sourceHeaderRow = r;
             designationCol = c;
             break;
@@ -116,7 +124,9 @@ export async function analyzeSourceFiles(
         if (sourceHeaderRow !== -1) break;
       }
 
-      if (sourceHeaderRow === -1) throw new Error(`Header "Désignation" non trouvé`);
+      if (sourceHeaderRow === -1) throw new Error(
+        `En-tête non trouvé. Le fichier doit contenir une colonne "Désignation" (FR) ou "Designation" / "Product" (EN) dans les 50 premières lignes.`
+      );
       const sourceFirstArticleRow = sourceHeaderRow + 2;
 
       // Client Info
