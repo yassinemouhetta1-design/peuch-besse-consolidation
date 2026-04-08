@@ -11,3 +11,5 @@ check.mjs
 *.xls
 *.xlsm
 *.xlsb
+
+.vercel

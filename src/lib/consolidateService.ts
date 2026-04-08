@@ -1,10 +1,20 @@
 import ExcelJS from 'exceljs';
 import * as XLSX from 'xlsx';
 
+export interface MatchedArticle {
+  designation: string;
+  appellation: string;
+  color: string;
+  millesime: string;
+  taille: string;
+  qty: number;
+}
+
 export interface MatchReport {
   clientName: string;
   fileName: string;
   matched: number;
+  matchedArticles: MatchedArticle[];
   unmatched: string[];
   totalBottles: number;
 }
@@ -62,7 +72,7 @@ function cellText(value: any): string {
 interface ParsedSourceFile {
   clientName: string;
   fileName: string;
-  articles: { designation: string; qty: number }[];
+  articles: { designation: string; appellation: string; color: string; millesime: string; taille: string; qty: number }[];
 }
 
 /**
@@ -102,7 +112,7 @@ async function parseSourceFile(file: File): Promise<ParsedSourceFile> {
       : `${cellText(nom)} ${cellText(prenom)}`.trim();
 
   // Extract articles from rows 14-179
-  const articles: { designation: string; qty: number }[] = [];
+  const articles: { designation: string; appellation: string; color: string; millesime: string; taille: string; qty: number }[] = [];
 
   for (let r = 14; r <= 179; r++) {
     const row = sheet.getRow(r);
@@ -111,11 +121,21 @@ async function parseSourceFile(file: File): Promise<ParsedSourceFile> {
     if (!designation) continue;
 
     const cartons = parseNum(row.getCell(12).value); // Col L
+    const lineTotal = parseNum(row.getCell(13).value); // Col M — Montant HT
     const btlPerCarton = parseNum(row.getCell(9).value) || 1; // Col I, default 1
     const qty = Math.round(cartons * btlPerCarton);
 
+    // Double protection : skip les lignes de titre/section qui ont du texte col B
+    // mais aucune quantité ni montant HT (évite les valeurs parasites comme 2500 en col L)
+    if (lineTotal <= 0 && cartons <= 0) continue;
+
+    const appellation = cellText(row.getCell(4).value); // Col D
+    const color = cellText(row.getCell(6).value); // Col F
+    const millesime = cellText(row.getCell(8).value); // Col H
+    const taille = cellText(row.getCell(9).value); // Col I
+
     if (qty > 0) {
-      articles.push({ designation, qty });
+      articles.push({ designation, appellation, color, millesime, taille, qty });
     }
   }
 
@@ -135,14 +155,48 @@ export async function consolidateToMatrix(
   await templateWb.xlsx.load(await templateFile.arrayBuffer());
   const globalSheet = templateWb.worksheets[0];
 
-  // 2. Build a lookup map: normalized designation → row number in the global
-  const designationMap = new Map<string, number>();
+  // 2. Build lookup maps.
+  //
+  // Règle : quand la taille est présente dans la commande, elle est OBLIGATOIRE dans le match —
+  // pas de fallback vers une clé sans taille (évite de matcher le mauvais format).
+  // Quand la taille est absente, on utilise les maps sans taille.
+  //
+  // Maps AVEC taille (utilisées si nt !== '')
+  const mapT_DACMT = new Map<string, number>(); // desig|appel|color|mill|taille  (match complet)
+  const mapT_DACT  = new Map<string, number>(); // desig|appel|color|taille       (sans mill)
+  const mapT_DAT   = new Map<string, number>(); // desig|appel|taille             (sans color)
+  const mapT_DT    = new Map<string, number>(); // desig|taille                   (fallback minimal)
+  //
+  // Maps SANS taille (utilisées si nt === '')
+  const mapDACM    = new Map<string, number>(); // desig|appel|color|mill
+  const mapDAC     = new Map<string, number>(); // desig|appel|color
+  const mapDA      = new Map<string, number>(); // desig|appel
+  const mapD       = new Map<string, number>(); // desig only
+
   for (let r = 4; r <= 172; r++) {
-    const cellVal = globalSheet.getRow(r).getCell(1).value; // Col A
-    const text = cellText(cellVal);
-    if (text) {
-      designationMap.set(normalize(text), r);
-    }
+    const row = globalSheet.getRow(r);
+    const desig  = normalize(cellText(row.getCell(1).value)); // Col A
+    const appel  = normalize(cellText(row.getCell(2).value)); // Col B
+    const color  = normalize(cellText(row.getCell(3).value)); // Col C
+    const mill   = normalize(cellText(row.getCell(5).value)); // Col E — Millésime
+    const taille = normalize(cellText(row.getCell(6).value)); // Col F — Taille
+
+    // Skip les lignes de titre/section : elles n'ont que col A remplie.
+    // Un vrai produit a toujours au minimum une appellation, une couleur OU une taille.
+    if (!desig) continue;
+    if (!appel && !color && !taille) continue; // ← ligne titre de section → ignorée
+
+    // Maps avec taille
+    mapT_DACMT.set(`${desig}|${appel}|${color}|${mill}|${taille}`, r);
+    if (!mapT_DACT.has(`${desig}|${appel}|${color}|${taille}`)) mapT_DACT.set(`${desig}|${appel}|${color}|${taille}`, r);
+    if (!mapT_DAT.has(`${desig}|${appel}|${taille}`)) mapT_DAT.set(`${desig}|${appel}|${taille}`, r);
+    if (!mapT_DT.has(`${desig}|${taille}`)) mapT_DT.set(`${desig}|${taille}`, r);
+
+    // Maps sans taille
+    if (!mapDACM.has(`${desig}|${appel}|${color}|${mill}`)) mapDACM.set(`${desig}|${appel}|${color}|${mill}`, r);
+    if (!mapDAC.has(`${desig}|${appel}|${color}`)) mapDAC.set(`${desig}|${appel}|${color}`, r);
+    if (!mapDA.has(`${desig}|${appel}`)) mapDA.set(`${desig}|${appel}`, r);
+    if (!mapD.has(desig)) mapD.set(desig, r);
   }
 
   // 3. Parse all source files first
@@ -175,18 +229,41 @@ export async function consolidateToMatrix(
 
     // Match and inject
     const unmatched: string[] = [];
+    const matchedArticles: MatchedArticle[] = [];
     let matched = 0;
     let totalBottles = 0;
 
     for (const article of source.articles) {
-      const normalizedDesig = normalize(article.designation);
-      const targetRow = designationMap.get(normalizedDesig);
+      const nd = normalize(article.designation);
+      const na = normalize(article.appellation);
+      const nc = normalize(article.color);
+      const nm = normalize(article.millesime);
+      const nt = normalize(article.taille);
+
+      // Si taille présente → elle est obligatoire dans le match, pas de fallback sans elle
+      // Si taille absente → fallbacks classiques sans contrainte taille
+      const targetRow = nt
+        ? mapT_DACMT.get(`${nd}|${na}|${nc}|${nm}|${nt}`) ??
+          mapT_DACT.get(`${nd}|${na}|${nc}|${nt}`) ??
+          mapT_DAT.get(`${nd}|${na}|${nt}`) ??
+          mapT_DT.get(`${nd}|${nt}`)
+        : mapDACM.get(`${nd}|${na}|${nc}|${nm}`) ??
+          mapDAC.get(`${nd}|${na}|${nc}`) ??
+          mapDA.get(`${nd}|${na}`) ??
+          mapD.get(nd);
 
       if (targetRow !== undefined) {
-        // Inject qty as Number in the bottles column
         globalSheet.getRow(targetRow).getCell(bottlesCol).value = article.qty;
         matched++;
         totalBottles += article.qty;
+        matchedArticles.push({
+          designation: article.designation,
+          appellation: article.appellation,
+          color: article.color,
+          millesime: article.millesime,
+          taille: article.taille,
+          qty: article.qty,
+        });
       } else {
         unmatched.push(article.designation);
       }
@@ -199,6 +276,7 @@ export async function consolidateToMatrix(
       clientName: source.clientName,
       fileName: source.fileName,
       matched,
+      matchedArticles,
       unmatched,
       totalBottles,
     });

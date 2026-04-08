@@ -4,6 +4,9 @@ import * as XLSX from 'xlsx';
 export interface ArticleDetail {
   designation: string;
   appellation: string;
+  color: string;
+  millesime: string;
+  taille: string;
   quantity: number;
   price: number;
   total: number;
@@ -165,14 +168,41 @@ export async function analyzeSourceFiles(
         } else {
           appellation = rawAppellation?.toString() || '';
         }
-        
+
+        const rawColor = row.getCell(6).value; // Col F
+        let color = '';
+        if (rawColor && typeof rawColor === 'object' && 'richText' in rawColor) {
+          color = (rawColor as any).richText.map((rt: any) => rt.text).join('');
+        } else {
+          color = rawColor?.toString() || '';
+        }
+
+        const rawMillesime = row.getCell(8).value; // Col H
+        let millesime = '';
+        if (rawMillesime && typeof rawMillesime === 'object' && 'richText' in rawMillesime) {
+          millesime = (rawMillesime as any).richText.map((rt: any) => rt.text).join('');
+        } else {
+          millesime = rawMillesime?.toString() || '';
+        }
+
+        const rawTaille = row.getCell(9).value; // Col I
+        let taille = '';
+        if (rawTaille && typeof rawTaille === 'object' && 'richText' in rawTaille) {
+          taille = (rawTaille as any).richText.map((rt: any) => rt.text).join('');
+        } else {
+          taille = rawTaille?.toString() || '';
+        }
+
         articlesTotal += lineTotal;
         totalBottles += lineBottles;
-        
-        articles.push({ 
-          designation, 
-          appellation, 
-          quantity: lineBottles, 
+
+        articles.push({
+          designation,
+          appellation,
+          color,
+          millesime,
+          taille,
+          quantity: lineBottles,
           price: lineBottles > 0 ? lineTotal / lineBottles : 0,
           total: lineTotal
         });

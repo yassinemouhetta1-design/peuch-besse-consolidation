@@ -577,9 +577,9 @@ export default function App() {
                                               {rep.matchedArticles.map((art: MatchedArticle, aIdx: number) => (
                                                 <tr key={aIdx} className="border-b border-slate-100 hover:bg-slate-50">
                                                   <td className="py-2 px-2">
-                                                    <p className="text-xs font-semibold text-slate-900">{art.designation}</p>
+                                                    <p className="text-sm font-semibold text-slate-900">{art.designation}</p>
                                                     {art.appellation && art.appellation !== art.designation && (
-                                                      <p className="text-[10px] text-brand italic">{art.appellation}</p>
+                                                      <p className="text-xs text-brand font-semibold italic">{art.appellation}</p>
                                                     )}
                                                   </td>
                                                   <td className="py-2 px-2">
@@ -786,10 +786,10 @@ export default function App() {
                                                 className="border-b border-slate-100 hover:bg-white transition-colors"
                                               >
                                                 <td className="py-3 px-2">
-                                                  <p className="font-bold text-slate-900">
+                                                  <p className="text-sm font-bold text-slate-900">
                                                     {art.designation}
                                                   </p>
-                                                  <p className="text-[10px] text-brand font-medium italic">
+                                                  <p className="text-xs text-brand font-semibold italic">
                                                     {art.appellation}
                                                   </p>
                                                 </td>
